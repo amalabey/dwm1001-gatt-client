@@ -28,3 +28,12 @@ Example output:
 ```
 
 
+## GUI Demo
+Install wxpython:
+```
+pip install -U -f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-18.04/ wxPython
+```
+Install depencies:
+```
+sudo apt-get install git curl libsdl2-mixer-2.0-0 libsdl2-image-2.0-0 libsdl2-2.0-0
+```
