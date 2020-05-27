@@ -24,6 +24,21 @@ class AnyDevice(gatt.Device):
             for characteristic in service.characteristics:
                 print("[%s]    Characteristic [%s]" % (self.mac_address, characteristic.uuid))
 
+        self.read_location()
+
+    def read_location(self):
+        device_information_service = next(
+            s for s in self.services
+            if s.uuid == '680c21d9-c946-4c1f-9c11-baa1c21329e7')
+
+        location_data_characteristic = next(
+            c for c in device_information_service.characteristics
+            if c.uuid == '003bbdf2-c634-4b3d-ab56-7ec889b89a37')
+
+        location_data = location_data_characteristic.read_value()
+        print("Location Data: [%s]" % (location_data))
+        print("Location data length: %d" % len(location_data))
+
 
 device = AnyDevice(mac_address='c2:e2:ca:93:6b:ef', manager=manager)
 device.connect()
