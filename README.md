@@ -1,9 +1,11 @@
-# Setup
+# Overview  
+This sample demonstrate reading location data from a DWM1001 tag from it's BLE GATT interface.
 
-follow (instructions)[https://github.com/getsenic/gatt-python] to setup gatt, dbus for python in linux.
+## Ubuntu BLE GATT Setup
+Follow [instructions](https://github.com/getsenic/gatt-python) to setup gatt, dbus for python in linux.
 
 
-## Experiment: Read all gatt characteristics of a Tag
+### Experiment: Read all gatt characteristics of a Tag  
 Example output:
 ```
 [c2:e2:ca:93:6b:ef] Connected
