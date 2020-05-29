@@ -1,4 +1,5 @@
 import gatt
+import struct
 
 manager = gatt.DeviceManager(adapter_name='hci0')
 
@@ -17,14 +18,11 @@ class AnyDevice(gatt.Device):
 
     def services_resolved(self):
         super().services_resolved()
-
-        print("[%s] Resolved services" % (self.mac_address))
-        for service in self.services:
-            print("[%s]  Service [%s]" % (self.mac_address, service.uuid))
-            for characteristic in service.characteristics:
-                print("[%s]    Characteristic [%s]" % (self.mac_address, characteristic.uuid))
-
         self.read_location()
+
+    def characteristic_value_updated(self, characteristic, value):
+        #print("locationdata: %s" % value.decode("utf-8"))
+        self.decode_location(value)
 
     def read_location(self):
         device_information_service = next(
@@ -34,11 +32,25 @@ class AnyDevice(gatt.Device):
         location_data_characteristic = next(
             c for c in device_information_service.characteristics
             if c.uuid == '003bbdf2-c634-4b3d-ab56-7ec889b89a37')
-
+        location_data_characteristic.enable_notifications()
         location_data = location_data_characteristic.read_value()
-        print("Location Data: [%s]" % (location_data))
-        print("Location data length: %d" % len(location_data))
+        self.decode_location(location_data)
+    
+    def decode_location(self, location_data):
+        encoded_bytes = [int(v) for v in location_data]
 
+        loc_type = encoded_bytes[0:1]
+        x_pos = self.get_pos(encoded_bytes[1:5])
+        y_pos = self.get_pos(encoded_bytes[5:9])
+        quality = encoded_bytes[12]
+
+        if quality == 0:
+            print("Type = {0}, X = {1} , Y = {2}, Quality= {3}".format(loc_type, x_pos, y_pos, quality))
+
+    def get_pos(self, encoded_location):
+        pos_bytes = bytearray(encoded_location)
+        pos = struct.unpack('<i', pos_bytes)
+        return pos
 
 device = AnyDevice(mac_address='c2:e2:ca:93:6b:ef', manager=manager)
 device.connect()
