@@ -14,7 +14,7 @@ class DwmDeviceManager(gatt.DeviceManager):
 
     def device_discovered(self, device):
         if self.discovery_callback != None:
-            self.discovery_callback(device)
+            self.discovery_callback(self, device)
 
 class DwmDevice(gatt.Device):
     def __init__(self, mac_address, manager, location_callback=None, subscribe=False):
@@ -62,7 +62,7 @@ class DwmDevice(gatt.Device):
         return pos
 
 
-def dwm_node_discovered(device):
+def dwm_node_discovered(device_manager, device):
     print("Discovered [%s] %s" % (device.mac_address, device.alias()))
 
 def dwm_location_received(device_manager, device, x_pos, y_pos, quality):
