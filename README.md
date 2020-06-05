@@ -1,9 +1,10 @@
 # Overview  
-This sample demonstrate reading location data from a DWM1001 tag from it's BLE GATT interface.
+This sample demonstrate reading location data from a DWM1001 tag from it's BLE GATT interface with Python.
 
 ## Ubuntu BLE GATT Setup
 Follow [instructions](https://github.com/getsenic/gatt-python) to setup gatt, dbus for python in linux.
 
+**Note**: _Run `echo "power on" | sudo bluetoothctl` to activate bluetooth_
 
 ### Experiment: Read all gatt characteristics of a Tag  
 Example output:
@@ -29,6 +30,18 @@ Example output:
 [c2:e2:ca:93:6b:ef]  Service [00001801-0000-1000-8000-00805f9b34fb]
 ```
 
+## CLI Usage
+
+- **Discover blutooth devices**
+```
+sudo python3 dwm1001.py --discover
+```
+**Note**: _Above does not filter for dwm devices yet_
+
+- **Read location from the tag**
+```
+sudo python3 dwm1001.py --readlocation --mac <mac-address-of-the-tab> [--continous]
+```
 
 ## GUI Demo
 Install wxpython:
