@@ -76,6 +76,7 @@ if __name__ == '__main__':
     parser.add_argument("--discover", action="store_true", help="Discover active DWM bluetooth devices")
     parser.add_argument("--adapter", type=str, default= "hci0", help="Bluetooth adapter to use")
     parser.add_argument("--readlocation", action="store_true", help="Read location from the dwm device")
+    parser.add_argument("--continous", action="store_true", help="Continously read location from the device")
     parser.add_argument("--mac", type=str, help="Target device mac address")
 
     args = parser.parse_args()
@@ -89,7 +90,11 @@ if __name__ == '__main__':
     elif args.readlocation == True:
         print("Reading location data from: {0}".format(args.mac))
         manager = DwmDeviceManager(adapter_name=args.adapter, discovery_callback=dwm_node_discovered)
-        device = DwmDevice(mac_address=args.mac, manager=manager, location_callback=dwm_location_received, subscribe=False)
+        if args.continous:
+            device = DwmDevice(mac_address=args.mac, manager=manager, location_callback=dwm_location_received, subscribe=True)
+        else:
+            device = DwmDevice(mac_address=args.mac, manager=manager, location_callback=dwm_location_received, subscribe=False)
+
         device.connect()
         manager.run()
     
