@@ -1,6 +1,4 @@
 import wx
-from MarkerPanel import MarkerPanel
-# from MarkerControl import MarkerControl
 
 FLOOR_PLAN_IMAGE = 'demo/demo-floor-plan.png'
 ANCHOR_IMAGE = 'demo/anchor.png'
@@ -89,7 +87,7 @@ class LocationTrackerFame(wx.Frame):
         dc.DrawText(label, img_x + (ICON_IMG_WIDTH - tw)/2, img_y+ICON_IMG_HEIGHT)
 
         # Draw lines to all anchors
-        dc.SetPen(wx.Pen("gray", 1))
+        dc.SetPen(wx.Pen("gray", 1, style=wx.PENSTYLE_DOT))
         if self.anchors != None:
             for name in self.anchors:
                 anchor_x, anchor_y = self.anchors[name]
