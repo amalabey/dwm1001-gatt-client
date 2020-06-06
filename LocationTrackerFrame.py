@@ -1,5 +1,6 @@
 import wx
 from dwm1001 import DwmDevice
+from LocationTrackerWorker import DeviceType, LocationTrackerWorker, LocationTrackerWorker, LOC_RECEIVED_EVNT
 import threading
 
 FLOOR_PLAN_IMAGE = 'demo/demo-floor-plan.png'
@@ -11,42 +12,11 @@ TAG_IMAGE = 'demo/tag.png'
 ICON_IMG_WIDTH = 32
 ICON_IMG_HEIGHT = 32
 
-
 X_UI_RANGE = (16, 875)
 Y_UI_RANGE = (-16, 899)
 
 X_PHYSICAL_RANGE = (0, 3000)
 Y_PHYSICAL_RANGE = (0, 3220)
-
-
-LOC_RECEIVED_EVNT_TYPE = wx.NewEventType()
-LOC_RECEIVED_EVNT = wx.PyEventBinder(LOC_RECEIVED_EVNT_TYPE, 1)
-class LocationReceivedEvent(wx.PyCommandEvent):
-    def __init__(self, etype, eid, tag_name, x_pos, y_pos):
-        wx.PyCommandEvent.__init__(self, etype, eid)
-        self.tag_name = tag_name
-        self.x_pos = x_pos
-        self.y_pos = y_pos
-
-    def get_position(self):
-        return (self.x_pos, self.y_pos)
-
-class LocationSubscriberThread(threading.Thread):
-    def __init__(self, parent, device_manager, mac_address):
-        threading.Thread.__init__(self)
-        self._parent = parent
-        self._device_manager = device_manager
-        self._mac_address = mac_address
-
-    def run(self):
-        device = DwmDevice(mac_address=self._mac_address, manager=self._device_manager, 
-            location_callback=self.dwm_tag_location_received, subscribe=True)
-        device.connect()
-        self._device_manager.run()
-
-    def dwm_tag_location_received(self, device_manager, device, x_pos, y_pos, quality):
-        evt = LocationReceivedEvent(LOC_RECEIVED_EVNT_TYPE, -1, device.alias(), x_pos, y_pos)
-        wx.PostEvent(self._parent, evt)
 
 class LocationTrackerFame(wx.Frame):
     def __init__(self, device_manager, anchor_names, tag_name):
@@ -70,7 +40,9 @@ class LocationTrackerFame(wx.Frame):
         self.tag = None
         self.overlay = wx.Overlay()
 
-        self.init_location_tracking(device_manager, anchor_names, tag_name)
+        worker = LocationTrackerWorker(self, device_manager, anchor_names, tag_name)
+        worker.start()
+
         # self.add_anchor("Red", 100, 200)
         # self.add_anchor("Blue", 500, 300)
         # self.add_anchor("Green", 200, 700)
@@ -79,48 +51,17 @@ class LocationTrackerFame(wx.Frame):
         self.Bind(LOC_RECEIVED_EVNT, self.on_location_received)
         self.Show()
 
-    def init_location_tracking(self, device_manager, anchor_names, tag_name):
-        self.device_manager = device_manager
-        self.mac_address_mapping = {name:None for name in anchor_names}
-        self.mac_address_mapping[tag_name] = None
-
-        # We need to find the mac addresses of all anchors and tags
-        device_manager.set_discovery_callback(self.dwm_node_discovered)
-        device_manager.start_discovery()
-        device_manager.run()
-        print("completed discovering devices")
-
-        # We need to get anchor positions
-        device_manager.set_discovery_callback(None)
-        for anchor_name in anchor_names:
-            print("Finding location of {0}".format(anchor_name))
-            mac_address = self.mac_address_mapping[anchor_name]
-            device = DwmDevice(mac_address=mac_address, manager=device_manager, 
-                location_callback=self.dwm_anchor_location_received, subscribe=False)
-            device.connect()
-            device_manager.run()
-
-        # Subscribe to tag position so that we can show live view
-        mac_address = self.mac_address_mapping[tag_name]
-        worker = LocationSubscriberThread(self, device_manager, mac_address)
-        worker.start()
-
     def on_location_received(self, evt):
         x_pos, y_pos = evt.get_position()
         x_pixel, y_pixel = self.convert_to_ui_coordinates(x_pos, y_pos)
-        self.set_tag_position(x_pixel, y_pixel)
-        self.draw_tracking_overlay()
+        device_name = evt.get_alias()
+        device_type = evt.get_type()
 
-    def dwm_anchor_location_received(self, device_manager, device, x_pos, y_pos, quality):
-        print("X = {0}m , Y = {1}m, Quality= {2}, mac={3}".format(x_pos/1000, y_pos/1000, quality, device.mac_address))
-        
-        # add anchor with position
-        anchor_name = device.alias()
-        x_pixel, y_pixel = self.convert_to_ui_coordinates(x_pos, y_pos)
-        self.add_anchor(anchor_name, x_pixel, y_pixel)
-
-        if device.subscribe != True:
-            device_manager.stop()
+        if device_type == DeviceType.ANCHOR:
+            self.anchors[device_name] = (x_pixel, y_pixel)
+        else:
+            self.tag = (x_pixel, y_pixel)
+            self.draw_tracking_overlay()
 
     def convert_to_ui_coordinates(self, physical_x, physical_y):
         x_pixel_start, x_pixel_end = X_UI_RANGE
@@ -134,17 +75,6 @@ class LocationTrackerFame(wx.Frame):
         y_pixel_coord = int(physical_y * y_pixels_per_mm)
 
         return (x_pixel_coord, y_pixel_coord)
-    
-
-    def dwm_node_discovered(self, device_manager, device):
-        print("Discovered [%s] %s" % (device.mac_address, device.alias()))
-        alias = device.alias()
-        if alias in self.mac_address_mapping:
-            self.mac_address_mapping[alias] = device.mac_address
-        
-        # Check if we collected macs for all nodes
-        if None not in self.mac_address_mapping.values():
-            device_manager.stop()
 
     def imgctrl_on_mousemove(self, event):
         ctrl_pos = event.GetPosition()
@@ -154,12 +84,6 @@ class LocationTrackerFame(wx.Frame):
         relative_pos_y = pos[1] + screen_pos[1]
         self.status_bar.SetStatusText("X={0}, Y={1}".format(relative_pos_x,relative_pos_y))
         self.draw_tracking_overlay()
-
-    def add_anchor(self, name, x, y):
-        self.anchors[name] = (x, y)
-
-    def set_tag_position(self, x, y):
-        self.tag = (x, y)
 
     def draw_tracking_overlay(self):
         dc = wx.ClientDC(self)
