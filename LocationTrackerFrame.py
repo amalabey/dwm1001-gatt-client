@@ -2,6 +2,7 @@ import wx
 from dwm1001 import DwmDevice
 from LocationTrackerWorker import DeviceType, LocationTrackerWorker, LocationTrackerWorker, LOC_RECEIVED_EVNT
 import math
+import numpy as np
 import threading
 
 FLOOR_PLAN_IMAGE = 'demo/demo-floor-plan.png'
@@ -22,6 +23,8 @@ Y_PHYSICAL_RANGE = (0, 3220)
 QUALITY_THRESHOLD = 50
 MIN_UPDATE_DISTANCE = 0
 MAX_UPDATE_DISTANCE = 1000
+
+MAX_PREVIOUS_LOCATION_UPDATES = 3
 
 class LocationTrackerFame(wx.Frame):
     def __init__(self, device_manager, anchor_names, tag_name):
@@ -44,6 +47,7 @@ class LocationTrackerFame(wx.Frame):
         self.anchors = dict()
         self.tag = None
         self.overlay = wx.Overlay()
+        self.previous_loc_updates = list()
 
         worker = LocationTrackerWorker(self, device_manager, anchor_names, tag_name)
         worker.start()
@@ -58,27 +62,47 @@ class LocationTrackerFame(wx.Frame):
 
     def on_location_received(self, evt):
         x_pos, y_pos = evt.get_position()
-        x_pixel, y_pixel = self.convert_to_ui_coordinates(x_pos, y_pos)
         device_name = evt.get_alias()
         device_type = evt.get_type()
         quality = evt.get_quality()
 
         if quality > QUALITY_THRESHOLD:
             if device_type == DeviceType.ANCHOR:
+                # Set anchor location
+                x_pixel, y_pixel = self.convert_to_ui_coordinates(x_pos, y_pos)
                 self.anchors[device_name] = (x_pixel, y_pixel, x_pos, y_pos)
                 self.draw_tracking_overlay()
             else:
-                if self.tag != None:
-                    x,y,curr_x,curr_y = self.tag
-                    distance = self.calculate_distance(x_pos, y_pos, curr_x, curr_y)
-                    if distance < MIN_UPDATE_DISTANCE or distance > MAX_UPDATE_DISTANCE:
-                        print("distance={0} was out of range={1} - {2}".format(distance, MIN_UPDATE_DISTANCE, MAX_UPDATE_DISTANCE))
-                        return
+                #if self.tag != None:
+                    # Set tag location
+                    #x,y,curr_x,curr_y = self.tag
+                    # distance = self.calculate_distance(x_pos, y_pos, curr_x, curr_y)
+                    # if distance < MIN_UPDATE_DISTANCE or distance > MAX_UPDATE_DISTANCE:
+                    #     print("distance={0} was out of range={1} - {2}".format(distance, MIN_UPDATE_DISTANCE, MAX_UPDATE_DISTANCE))
+                    #     return
+                x_norm, y_norm = self.get_normalized_location(x_pos, y_pos, quality)
+                x_pixel, y_pixel = self.convert_to_ui_coordinates(x_norm, y_norm)
                 
                 self.tag = (x_pixel, y_pixel, x_pos, y_pos)
                 self.draw_tracking_overlay()
         else:
             print("Ignored x={0}, y={1}, due to poor quality={2}".format(x_pos, y_pos, quality))
+
+    def get_normalized_location(self, x, y, quality):
+        # Ensure we look at given number of  past loc updates to calculate average
+        self.previous_loc_updates.append((x, y, quality))
+        if len(self.previous_loc_updates) > MAX_PREVIOUS_LOCATION_UPDATES:
+            del self.previous_loc_updates[0]
+        
+        # Calculate weighted average, using quality as the weight
+        x_values = np.array([x for x,y,q in self.previous_loc_updates])
+        y_values = np.array([y for x,y,q in self.previous_loc_updates])
+        q_values = np.array([q for x,y,q in self.previous_loc_updates])
+
+        x_avg = np.average(x_values, weights=q_values)
+        y_avg = np.average(y_values, weights=q_values)
+
+        return (x_avg, y_avg)
 
     def convert_to_ui_coordinates(self, physical_x, physical_y):
         x_pixel_start, x_pixel_end = X_UI_RANGE
