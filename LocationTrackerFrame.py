@@ -4,8 +4,9 @@ from MarkerPanel import MarkerPanel
 
 FLOOR_PLAN_IMAGE = 'demo/demo-floor-plan.png'
 ANCHOR_IMAGE = 'demo/anchor.png'
-ANCHOR_IMG_WIDTH = 50
-ANCHOR_IMAGE_HEIGHT = 50
+TAG_IMAGE = 'demo/tag.png'
+ICON_IMG_WIDTH = 32
+ICON_IMG_HEIGHT = 32
 
 class LocationTrackerFame(wx.Frame):
     def __init__(self):
@@ -29,6 +30,11 @@ class LocationTrackerFame(wx.Frame):
         self.tag = None
         self.overlay = wx.Overlay()
 
+        self.add_anchor("Red", 100, 200)
+        self.add_anchor("Blue", 500, 300)
+        self.add_anchor("Green", 200, 700)
+        self.set_tag_position(250, 250)
+
         self.Show()
 
     def imgctrl_on_mousemove(self, event):
@@ -41,24 +47,63 @@ class LocationTrackerFame(wx.Frame):
 
         self.draw_tracking_overlay()
 
+    def add_anchor(self, name, x, y):
+        self.anchors[name] = (x, y)
+
+    def set_tag_position(self, x, y):
+        self.tag = (x, y)
+
     def draw_tracking_overlay(self):
         dc = wx.ClientDC(self)
+        font = wx.Font(pointSize = 9, family = wx.DEFAULT,
+               style = wx.NORMAL, weight = wx.NORMAL,
+               faceName = 'Consolas')
+        dc.SetFont(font)
+
         odc = wx.DCOverlay(self.overlay, dc)
         odc.Clear()
+        
+        # draw anchors
+        if self.anchors != None:
+            for name in self.anchors:
+                x, y = self.anchors[name]
+                self._draw_anchor(dc, name, x, y)
 
-        self._draw_anchor(dc, "Red", 100, 200)
-        self._draw_anchor(dc, "Blue", 500, 300)
-        self._draw_anchor(dc, "Green", 200, 700)
+        # draw tag
+        if self.tag != None:
+            x , y = self.tag
+            self._draw_tag(dc, x, y)
 
+    def _draw_tag(self, dc, x, y):
+        # Draw icon: tag image
+        icon_img = wx.Image(TAG_IMAGE, wx.BITMAP_TYPE_ANY).Scale(ICON_IMG_WIDTH, ICON_IMG_HEIGHT, wx.IMAGE_QUALITY_HIGH)
+        icon_bitmap = icon_img.ConvertToBitmap()
+        img_x = x-(ICON_IMG_WIDTH/2)
+        img_y = y-(ICON_IMG_HEIGHT)
+        dc.DrawBitmap(icon_bitmap, img_x, img_y)
+        dc.DrawCircle(x, y, 3)
+
+        # Draw text: position
+        label = "x={0}mm, y={0}mm".format(x, y)
+        tw, th = dc.GetTextExtent(label)
+        dc.DrawText(label, img_x + (ICON_IMG_WIDTH - tw)/2, img_y+ICON_IMG_HEIGHT)
+
+        # Draw lines to all anchors
+        dc.SetPen(wx.Pen("gray", 1))
+        if self.anchors != None:
+            for name in self.anchors:
+                anchor_x, anchor_y = self.anchors[name]
+                dc.DrawLine(x, y, anchor_x, anchor_y)
 
     def _draw_anchor(self, dc, name, x, y):
         # Draw icon: Anchor image
-        icon_img = wx.Image('demo/anchor.png', wx.BITMAP_TYPE_ANY).Scale(ANCHOR_IMG_WIDTH, ANCHOR_IMAGE_HEIGHT, wx.IMAGE_QUALITY_HIGH)
+        icon_img = wx.Image('demo/anchor.png', wx.BITMAP_TYPE_ANY).Scale(ICON_IMG_WIDTH, ICON_IMG_HEIGHT, wx.IMAGE_QUALITY_HIGH)
         icon_bitmap = icon_img.ConvertToBitmap()
-        #icon_bitmap.SetSize(ANCHOR_IMG_WIDTH,ANCHOR_IMAGE_HEIGHT)
-        dc.DrawBitmap(icon_bitmap, x, y)
+        img_x = x-(ICON_IMG_WIDTH/2)
+        img_y = y-(ICON_IMG_HEIGHT/2)
+        dc.DrawBitmap(icon_bitmap, img_x , img_y)
 
         # Draw text: Name and position
         label = "{0} (x={1}mm, y={2}mm)".format(name, x, y)
         tw, th = dc.GetTextExtent(label)
-        dc.DrawText(label, x, y+ANCHOR_IMAGE_HEIGHT)
+        dc.DrawText(label, img_x, img_y+ICON_IMG_HEIGHT)
