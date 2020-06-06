@@ -1,17 +1,24 @@
 import wx
 
 FLOOR_PLAN_IMAGE = 'demo/demo-floor-plan.png'
+WINDOW_WIDTH = 890
+WINDOW_HEIGHT = 1000
+
 ANCHOR_IMAGE = 'demo/anchor.png'
 TAG_IMAGE = 'demo/tag.png'
 ICON_IMG_WIDTH = 32
 ICON_IMG_HEIGHT = 32
 
-class LocationTrackerFame(wx.Frame):
-    def __init__(self):
-        super().__init__(parent=None, title='Location Tracker')
+X_OFFSET = 16
+Y_OFFSET = -16
 
-        self.SetSize((890, 1000))
-        self.SetTitle('wx.StaticLine')
+class LocationTrackerFame(wx.Frame):
+    def __init__(self, device_manager, anchor_names, tag_name):
+        super().__init__(parent=None, title='Location Tracker')
+        self.init_location_tracking(device_manager, anchor_names, tag_name)
+
+        self.SetSize((WINDOW_WIDTH, WINDOW_HEIGHT))
+        self.SetTitle('DWM1001 Location Tracker Demo')
         self.Centre()
 
         img = wx.Image(FLOOR_PLAN_IMAGE, wx.BITMAP_TYPE_ANY)
@@ -34,6 +41,28 @@ class LocationTrackerFame(wx.Frame):
         self.set_tag_position(250, 250)
 
         self.Show()
+
+    def init_location_tracking(self, device_manager, anchor_names, tag_name):
+        self.device_manager = device_manager
+        self.mac_address_mapping = {name:None for name in anchor_names}
+        self.mac_address_mapping[tag_name] = None
+
+        # We need to find the mac addresses of all anchors and tags
+        device_manager.set_discovery_callback(self.dwm_node_discovered)
+        device_manager.start_discovery()
+        device_manager.run()
+
+        print("completed discovering devices")
+
+    def dwm_node_discovered(self, device_manager, device):
+        print("Discovered [%s] %s" % (device.mac_address, device.alias()))
+        alias = device.alias()
+        if alias in self.mac_address_mapping:
+            self.mac_address_mapping[alias] = device.mac_address
+        
+        # Check if we collected macs for all nodes
+        if None not in self.mac_address_mapping.values():
+            device_manager.stop()
 
     def imgctrl_on_mousemove(self, event):
         ctrl_pos = event.GetPosition()

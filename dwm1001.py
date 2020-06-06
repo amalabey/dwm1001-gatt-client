@@ -12,6 +12,9 @@ class DwmDeviceManager(gatt.DeviceManager):
         self.discovery_callback = discovery_callback
         super(DwmDeviceManager, self).__init__(adapter_name=adapter_name)
 
+    def set_discovery_callback(self, discovery_callback):
+        self.discovery_callback = discovery_callback
+
     def device_discovered(self, device):
         if self.discovery_callback != None:
             self.discovery_callback(self, device)
