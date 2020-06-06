@@ -22,8 +22,8 @@ Y_PHYSICAL_RANGE = (0, 3220)
 
 QUALITY_THRESHOLD = 50
 
-MAX_PREVIOUS_LOCATION_UPDATES = 5 # look at previous 3 updates to calculated avg position
-SKIP_LOCATION_UPDATES = 2 # ui updates after every 3rd loc update
+MAX_PREVIOUS_LOCATION_UPDATES = 10 # look at previous 3 updates to calculated avg position
+SKIP_LOCATION_UPDATES = 1 # ui updates after every 3rd loc update
 
 class LocationTrackerFame(wx.Frame):
     def __init__(self, device_manager, anchor_names, tag_name):
@@ -170,11 +170,17 @@ class LocationTrackerFame(wx.Frame):
         # Draw icon: Anchor image
         icon_img = wx.Image('demo/anchor.png', wx.BITMAP_TYPE_ANY).Scale(ICON_IMG_WIDTH, ICON_IMG_HEIGHT, wx.IMAGE_QUALITY_HIGH)
         icon_bitmap = icon_img.ConvertToBitmap()
+        x_pixel_start, x_pixel_end = X_UI_RANGE
         img_x = x-(ICON_IMG_WIDTH/2)
+        img_x = x_pixel_start if img_x < x_pixel_start else img_x
+        img_x = x_pixel_end if img_x > x_pixel_end else img_x
+
         img_y = y-(ICON_IMG_HEIGHT/2)
         dc.DrawBitmap(icon_bitmap, img_x , img_y)
 
         # Draw text: Name and position
         label = "{0} (x={1} mm, y={2} mm)".format(name, x_mm, y_mm)
         tw, th = dc.GetTextExtent(label)
-        dc.DrawText(label, img_x, img_y+ICON_IMG_HEIGHT)
+        lbl_x = img_x + ICON_IMG_WIDTH if img_x < (x_pixel_end + x_pixel_start)/2 else img_x - tw
+        lbl_y = img_y+ICON_IMG_HEIGHT
+        dc.DrawText(label, lbl_x, lbl_y)
