@@ -1,6 +1,7 @@
 import wx
 from dwm1001 import DwmDevice
 from LocationTrackerWorker import DeviceType, LocationTrackerWorker, LocationTrackerWorker, LOC_RECEIVED_EVNT
+import math
 import threading
 
 FLOOR_PLAN_IMAGE = 'demo/demo-floor-plan.png'
@@ -17,6 +18,10 @@ Y_UI_RANGE = (-16, 899)
 
 X_PHYSICAL_RANGE = (0, 3000)
 Y_PHYSICAL_RANGE = (0, 3220)
+
+QUALITY_THRESHOLD = 50
+MIN_UPDATE_DISTANCE = 0
+MAX_UPDATE_DISTANCE = 1000
 
 class LocationTrackerFame(wx.Frame):
     def __init__(self, device_manager, anchor_names, tag_name):
@@ -58,12 +63,19 @@ class LocationTrackerFame(wx.Frame):
         device_type = evt.get_type()
         quality = evt.get_quality()
 
-        if quality > 75:
+        if quality > QUALITY_THRESHOLD:
             if device_type == DeviceType.ANCHOR:
-                self.anchors[device_name] = (x_pixel, y_pixel)
+                self.anchors[device_name] = (x_pixel, y_pixel, x_pos, y_pos)
                 self.draw_tracking_overlay()
             else:
-                self.tag = (x_pixel, y_pixel)
+                if self.tag != None:
+                    x,y,curr_x,curr_y = self.tag
+                    distance = self.calculate_distance(x_pos, y_pos, curr_x, curr_y)
+                    if distance < MIN_UPDATE_DISTANCE or distance > MAX_UPDATE_DISTANCE:
+                        print("distance={0} was out of range={1} - {2}".format(distance, MIN_UPDATE_DISTANCE, MAX_UPDATE_DISTANCE))
+                        return
+                
+                self.tag = (x_pixel, y_pixel, x_pos, y_pos)
                 self.draw_tracking_overlay()
         else:
             print("Ignored x={0}, y={1}, due to poor quality={2}".format(x_pos, y_pos, quality))
@@ -80,6 +92,10 @@ class LocationTrackerFame(wx.Frame):
         y_pixel_coord = int(physical_y * y_pixels_per_mm)
 
         return (x_pixel_coord, y_pixel_coord)
+
+    def calculate_distance(self, x1, y1, x2, y2):
+        distance = math.sqrt(((x1-x2)**2)+((y1-y2)**2) )
+        return distance
 
     def imgctrl_on_mousemove(self, event):
         ctrl_pos = event.GetPosition()
@@ -103,15 +119,15 @@ class LocationTrackerFame(wx.Frame):
         # draw anchors
         if self.anchors != None:
             for name in self.anchors:
-                x, y = self.anchors[name]
-                self._draw_anchor(dc, name, x, y)
+                x, y, x_mm, y_mm = self.anchors[name]
+                self._draw_anchor(dc, name, x, y, x_mm, y_mm)
 
         # draw tag
         if self.tag != None:
-            x , y = self.tag
-            self._draw_tag(dc, x, y)
+            x , y, x_mm, y_mm = self.tag
+            self._draw_tag(dc, x, y, x_mm, y_mm)
 
-    def _draw_tag(self, dc, x, y):
+    def _draw_tag(self, dc, x, y, x_mm, y_mm):
         # Draw icon: tag image
         icon_img = wx.Image(TAG_IMAGE, wx.BITMAP_TYPE_ANY).Scale(ICON_IMG_WIDTH, ICON_IMG_HEIGHT, wx.IMAGE_QUALITY_HIGH)
         icon_bitmap = icon_img.ConvertToBitmap()
@@ -121,7 +137,7 @@ class LocationTrackerFame(wx.Frame):
         dc.DrawCircle(x, y, 3)
 
         # Draw text: position
-        label = "x={0}mm, y={0}mm".format(x, y)
+        label = "x={0} mm, y={0} mm".format(x_mm, y_mm)
         tw, th = dc.GetTextExtent(label)
         dc.DrawText(label, img_x + (ICON_IMG_WIDTH - tw)/2, img_y+ICON_IMG_HEIGHT)
 
@@ -129,10 +145,10 @@ class LocationTrackerFame(wx.Frame):
         dc.SetPen(wx.Pen("gray", 1, style=wx.PENSTYLE_DOT))
         if self.anchors != None:
             for name in self.anchors:
-                anchor_x, anchor_y = self.anchors[name]
+                anchor_x, anchor_y, x_mm, y_mm = self.anchors[name]
                 dc.DrawLine(x, y, anchor_x, anchor_y)
 
-    def _draw_anchor(self, dc, name, x, y):
+    def _draw_anchor(self, dc, name, x, y, x_mm, y_mm):
         # Draw icon: Anchor image
         icon_img = wx.Image('demo/anchor.png', wx.BITMAP_TYPE_ANY).Scale(ICON_IMG_WIDTH, ICON_IMG_HEIGHT, wx.IMAGE_QUALITY_HIGH)
         icon_bitmap = icon_img.ConvertToBitmap()
@@ -141,6 +157,6 @@ class LocationTrackerFame(wx.Frame):
         dc.DrawBitmap(icon_bitmap, img_x , img_y)
 
         # Draw text: Name and position
-        label = "{0} (x={1}mm, y={2}mm)".format(name, x, y)
+        label = "{0} (x={1} mm, y={2} mm)".format(name, x_mm, y_mm)
         tw, th = dc.GetTextExtent(label)
         dc.DrawText(label, img_x, img_y+ICON_IMG_HEIGHT)
