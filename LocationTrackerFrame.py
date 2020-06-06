@@ -56,12 +56,17 @@ class LocationTrackerFame(wx.Frame):
         x_pixel, y_pixel = self.convert_to_ui_coordinates(x_pos, y_pos)
         device_name = evt.get_alias()
         device_type = evt.get_type()
+        quality = evt.get_quality()
 
-        if device_type == DeviceType.ANCHOR:
-            self.anchors[device_name] = (x_pixel, y_pixel)
+        if quality > 75:
+            if device_type == DeviceType.ANCHOR:
+                self.anchors[device_name] = (x_pixel, y_pixel)
+                self.draw_tracking_overlay()
+            else:
+                self.tag = (x_pixel, y_pixel)
+                self.draw_tracking_overlay()
         else:
-            self.tag = (x_pixel, y_pixel)
-            self.draw_tracking_overlay()
+            print("Ignored x={0}, y={1}, due to poor quality={2}".format(x_pos, y_pos, quality))
 
     def convert_to_ui_coordinates(self, physical_x, physical_y):
         x_pixel_start, x_pixel_end = X_UI_RANGE

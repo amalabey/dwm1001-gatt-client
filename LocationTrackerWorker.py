@@ -10,12 +10,13 @@ class DeviceType(Enum):
 LOC_RECEIVED_EVNT_TYPE = wx.NewEventType()
 LOC_RECEIVED_EVNT = wx.PyEventBinder(LOC_RECEIVED_EVNT_TYPE, 1)
 class LocationReceivedEvent(wx.PyCommandEvent):
-    def __init__(self, etype, eid, alias, type, x_pos, y_pos):
+    def __init__(self, etype, eid, alias, type, x_pos, y_pos, quality):
         wx.PyCommandEvent.__init__(self, etype, eid)
         self._alias = alias
         self._type = type
         self._x_pos = x_pos
         self._y_pos = y_pos
+        self._quality = quality
 
     def get_position(self):
         return (self._x_pos, self._y_pos)
@@ -25,6 +26,9 @@ class LocationReceivedEvent(wx.PyCommandEvent):
 
     def get_type(self):
         return self._type
+    
+    def get_quality(self):
+        return self._quality
 
 class LocationTrackerWorker(threading.Thread):
     def __init__(self, parent, device_manager, anchor_names, tag_name):
@@ -80,7 +84,7 @@ class LocationTrackerWorker(threading.Thread):
         print("X = {0}m , Y = {1}m, Quality= {2}, mac={3}".format(x_pos/1000, y_pos/1000, quality, device.mac_address))
 
         if self._parent != None:
-            evt = LocationReceivedEvent(LOC_RECEIVED_EVNT_TYPE, -1, device.alias(), DeviceType.ANCHOR, x_pos, y_pos)
+            evt = LocationReceivedEvent(LOC_RECEIVED_EVNT_TYPE, -1, device.alias(), DeviceType.ANCHOR, x_pos, y_pos, quality)
             wx.PostEvent(self._parent, evt)
         else:
             print("ERR:Parent object not available")
@@ -90,7 +94,7 @@ class LocationTrackerWorker(threading.Thread):
 
     def dwm_tag_location_received(self, device_manager, device, x_pos, y_pos, quality):
         if self._parent != None:
-            evt = LocationReceivedEvent(LOC_RECEIVED_EVNT_TYPE, -1, device.alias(), DeviceType.TAG, x_pos, y_pos)
+            evt = LocationReceivedEvent(LOC_RECEIVED_EVNT_TYPE, -1, device.alias(), DeviceType.TAG, x_pos, y_pos, quality)
             wx.PostEvent(self._parent, evt)
         else:
             print("ERR:Parent object not available")

@@ -53,7 +53,7 @@ class DwmDevice(gatt.Device):
         if len(encoded_bytes) >= 14:
             x_pos = self._get_pos(encoded_bytes[1:5])
             y_pos = self._get_pos(encoded_bytes[5:9])
-            quality = encoded_bytes[12]
+            quality = encoded_bytes[13]
             if self.location_callback != None:
                 self.location_callback(self.manager, self, x_pos, y_pos, quality)
         else:
