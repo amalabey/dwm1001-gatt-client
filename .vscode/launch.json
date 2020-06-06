@@ -5,6 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "sudo": false,
+            "args": []
+        },
+        {
             "name": "Discover (Python)",
             "type": "python",
             "request": "launch",
