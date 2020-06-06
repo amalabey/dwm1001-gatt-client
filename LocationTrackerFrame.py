@@ -31,7 +31,6 @@ class LocationReceivedEvent(wx.PyCommandEvent):
     def get_position(self):
         return (self.x_pos, self.y_pos)
 
-
 class LocationSubscriberThread(threading.Thread):
     def __init__(self, parent, device_manager, mac_address):
         threading.Thread.__init__(self)
@@ -106,27 +105,11 @@ class LocationTrackerFame(wx.Frame):
         worker = LocationSubscriberThread(self, device_manager, mac_address)
         worker.start()
 
-        # device = DwmDevice(mac_address=mac_address, manager=device_manager, 
-        #     location_callback=self.dwm_tag_location_received, subscribe=True)
-        # device.connect()
-        # device_manager.run()
-
     def on_location_received(self, evt):
         x_pos, y_pos = evt.get_position()
         x_pixel, y_pixel = self.convert_to_ui_coordinates(x_pos, y_pos)
         self.set_tag_position(x_pixel, y_pixel)
         self.draw_tracking_overlay()
-
-    # def dwm_tag_location_received(self, device_manager, device, x_pos, y_pos, quality):
-    #     print("X = {0}m , Y = {1}m, Quality= {2}, mac={3}".format(x_pos/1000, y_pos/1000, quality, device.mac_address))
-        
-    #     # set tag position
-    #     x_pixel, y_pixel = self.convert_to_ui_coordinates(x_pos, y_pos)
-    #     self.set_tag_position(x_pixel, y_pixel)
-
-    #     #self.draw_tracking_overlay()
-    #     if device.subscribe != True:
-    #         device_manager.stop()
 
     def dwm_anchor_location_received(self, device_manager, device, x_pos, y_pos, quality):
         print("X = {0}m , Y = {1}m, Quality= {2}, mac={3}".format(x_pos/1000, y_pos/1000, quality, device.mac_address))
