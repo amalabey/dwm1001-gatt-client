@@ -21,10 +21,9 @@ X_PHYSICAL_RANGE = (0, 3000)
 Y_PHYSICAL_RANGE = (0, 3220)
 
 QUALITY_THRESHOLD = 50
-MIN_UPDATE_DISTANCE = 0
-MAX_UPDATE_DISTANCE = 1000
 
-MAX_PREVIOUS_LOCATION_UPDATES = 3
+MAX_PREVIOUS_LOCATION_UPDATES = 5 # look at previous 3 updates to calculated avg position
+SKIP_LOCATION_UPDATES = 2 # ui updates after every 3rd loc update
 
 class LocationTrackerFame(wx.Frame):
     def __init__(self, device_manager, anchor_names, tag_name):
@@ -48,6 +47,7 @@ class LocationTrackerFame(wx.Frame):
         self.tag = None
         self.overlay = wx.Overlay()
         self.previous_loc_updates = list()
+        self.loc_update_index = 0
 
         worker = LocationTrackerWorker(self, device_manager, anchor_names, tag_name)
         worker.start()
@@ -73,18 +73,16 @@ class LocationTrackerFame(wx.Frame):
                 self.anchors[device_name] = (x_pixel, y_pixel, x_pos, y_pos)
                 self.draw_tracking_overlay()
             else:
-                #if self.tag != None:
-                    # Set tag location
-                    #x,y,curr_x,curr_y = self.tag
-                    # distance = self.calculate_distance(x_pos, y_pos, curr_x, curr_y)
-                    # if distance < MIN_UPDATE_DISTANCE or distance > MAX_UPDATE_DISTANCE:
-                    #     print("distance={0} was out of range={1} - {2}".format(distance, MIN_UPDATE_DISTANCE, MAX_UPDATE_DISTANCE))
-                    #     return
                 x_norm, y_norm = self.get_normalized_location(x_pos, y_pos, quality)
                 x_pixel, y_pixel = self.convert_to_ui_coordinates(x_norm, y_norm)
                 
-                self.tag = (x_pixel, y_pixel, x_pos, y_pos)
-                self.draw_tracking_overlay()
+                if self.loc_update_index == 0:
+                    self.tag = (x_pixel, y_pixel, x_pos, y_pos)
+                    self.draw_tracking_overlay()
+                
+                self.loc_update_index += 1
+                if self.loc_update_index >= SKIP_LOCATION_UPDATES:
+                    self.loc_update_index = 0
         else:
             print("Ignored x={0}, y={1}, due to poor quality={2}".format(x_pos, y_pos, quality))
 
@@ -116,10 +114,6 @@ class LocationTrackerFame(wx.Frame):
         y_pixel_coord = int(physical_y * y_pixels_per_mm)
 
         return (x_pixel_coord, y_pixel_coord)
-
-    def calculate_distance(self, x1, y1, x2, y2):
-        distance = math.sqrt(((x1-x2)**2)+((y1-y2)**2) )
-        return distance
 
     def imgctrl_on_mousemove(self, event):
         ctrl_pos = event.GetPosition()
