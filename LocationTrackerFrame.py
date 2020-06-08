@@ -20,10 +20,10 @@ Y_UI_RANGE = (-16, 899)
 X_PHYSICAL_RANGE = (0, 3000)
 Y_PHYSICAL_RANGE = (0, 3220)
 
-QUALITY_THRESHOLD = 50
+QUALITY_THRESHOLD = 0
 
-MAX_PREVIOUS_LOCATION_UPDATES = 10 # look at previous 3 updates to calculated avg position
-SKIP_LOCATION_UPDATES = 1 # ui updates after every 3rd loc update
+MAX_PREVIOUS_LOCATION_UPDATES = 10 # look at previous 'n' updates to calculated avg position
+SKIP_LOCATION_UPDATES = 0 # ui updates after every 'n' loc update
 
 class LocationTrackerFame(wx.Frame):
     def __init__(self, device_manager, anchor_names, tag_name):
@@ -34,9 +34,9 @@ class LocationTrackerFame(wx.Frame):
         self.Centre()
 
         img = wx.Image(FLOOR_PLAN_IMAGE, wx.BITMAP_TYPE_ANY)
-        bitmap_img = img.ConvertToBitmap()
+        self.bitmap_img = img.ConvertToBitmap()
         
-        self.floor_plan_img = wx.StaticBitmap(self, -1, bitmap_img, (10, 5), (bitmap_img.GetWidth(), bitmap_img.GetHeight()))
+        self.floor_plan_img = wx.StaticBitmap(self, -1, self.bitmap_img, (10, 5), (self.bitmap_img.GetWidth(), self.bitmap_img.GetHeight()))
         self.floor_plan_img.Bind(wx.EVT_MOTION, self.imgctrl_on_mousemove)
 
         self.status_bar = wx.StatusBar(self, -1, wx.STB_ELLIPSIZE_END, "defaultstatusbar");
@@ -56,10 +56,10 @@ class LocationTrackerFame(wx.Frame):
         # self.add_anchor("Blue", 500, 300)
         # self.add_anchor("Green", 200, 700)
         #self.set_tag_position(250, 250)
-
-        self.Bind(LOC_RECEIVED_EVNT, self.on_location_received)
+          
         self.Show()
-
+        self.Bind(LOC_RECEIVED_EVNT, self.on_location_received)
+    
     def on_location_received(self, evt):
         x_pos, y_pos = evt.get_position()
         device_name = evt.get_alias()
@@ -76,7 +76,7 @@ class LocationTrackerFame(wx.Frame):
                 x_norm, y_norm = self.get_normalized_location(x_pos, y_pos, quality)
                 x_pixel, y_pixel = self.convert_to_ui_coordinates(x_norm, y_norm)
                 
-                if self.loc_update_index == 0:
+                if SKIP_LOCATION_UPDATES == 0 or self.loc_update_index == 0:
                     self.tag = (x_pixel, y_pixel, x_pos, y_pos)
                     self.draw_tracking_overlay()
                 
@@ -87,7 +87,7 @@ class LocationTrackerFame(wx.Frame):
             print("Ignored x={0}, y={1}, due to poor quality={2}".format(x_pos, y_pos, quality))
 
     def get_normalized_location(self, x, y, quality):
-        # Ensure we look at given number of  past loc updates to calculate average
+        # Look at given number of  past loc updates to calculate average
         self.previous_loc_updates.append((x, y, quality))
         if len(self.previous_loc_updates) > MAX_PREVIOUS_LOCATION_UPDATES:
             del self.previous_loc_updates[0]
@@ -125,7 +125,11 @@ class LocationTrackerFame(wx.Frame):
         self.draw_tracking_overlay()
 
     def draw_tracking_overlay(self):
-        dc = wx.ClientDC(self)
+        mdc = wx.ClientDC(self)
+        dc = wx.BufferedDC(mdc)
+        # Draw floor plan
+        dc.DrawBitmap(self.bitmap_img, 10, 5)
+        
         font = wx.Font(pointSize = 9, family = wx.DEFAULT,
                style = wx.NORMAL, weight = wx.NORMAL,
                faceName = 'Consolas')
