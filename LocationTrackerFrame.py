@@ -52,11 +52,6 @@ class LocationTrackerFame(wx.Frame):
         worker = LocationTrackerWorker(self, device_manager, anchor_names, tag_name)
         worker.start()
 
-        # self.add_anchor("Red", 100, 200)
-        # self.add_anchor("Blue", 500, 300)
-        # self.add_anchor("Green", 200, 700)
-        #self.set_tag_position(250, 250)
-          
         self.Show()
         self.Bind(LOC_RECEIVED_EVNT, self.on_location_received)
     
