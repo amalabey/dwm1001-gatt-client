@@ -73,10 +73,12 @@ class LocationTrackerWorker(threading.Thread):
     def dwm_node_discovered(self, device_manager, device):
         print("Discovered [%s] %s" % (device.mac_address, device.alias()))
         alias = device.alias()
-        if alias in self._mac_address_mapping:
-            self._mac_address_mapping[alias] = device.mac_address
-        
+        for device_name in self._mac_address_mapping:
+            if alias.startswith(device_name):
+                self._mac_address_mapping[device_name] = device.mac_address
+       
         # Check if we collected macs for all nodes
+        print(self._mac_address_mapping)
         if None not in self._mac_address_mapping.values():
             device_manager.stop()
 
