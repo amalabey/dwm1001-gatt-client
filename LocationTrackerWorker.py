@@ -37,7 +37,8 @@ class LocationTrackerWorker(threading.Thread):
         self._device_manager = device_manager
         self._anchor_names = anchor_names
         self._tag_name = tag_name
-        self._mac_address_mapping = {name:None for name in anchor_names}
+        #self._mac_address_mapping = {name:None for name in anchor_names}
+        self._mac_address_mapping = {}
         self._mac_address_mapping[tag_name] = None
 
     def run(self):
@@ -47,22 +48,25 @@ class LocationTrackerWorker(threading.Thread):
         self._device_manager.run()
 
         # We need to get anchor positions
-        self._device_manager.set_discovery_callback(None)
-        for anchor_name in self._anchor_names:
-            print("Finding location of {0}".format(anchor_name))
-            if anchor_name in self._mac_address_mapping:
-                mac_address = self._mac_address_mapping[anchor_name]
-                device = DwmDevice(mac_address=mac_address, manager=self._device_manager, 
-                    location_callback=self.dwm_anchor_location_received, subscribe=False)
-                device.connect()
-                self._device_manager.run()
-            else:
-                print("Device: {0} is not discovered yet".format(anchor_name))
-
+        # self._device_manager.set_discovery_callback(None)
+        # for anchor_name in self._anchor_names:
+        #     print("Finding location of {0}".format(anchor_name))
+        #     if anchor_name in self._mac_address_mapping:
+        #         mac_address = self._mac_address_mapping[anchor_name]
+        #         device = DwmDevice(mac_address=mac_address, manager=self._device_manager, 
+        #             location_callback=self.dwm_anchor_location_received, subscribe=False)
+        #         device.connect()
+        #         self._device_manager.run()
+        #     else:
+        #         print("Device: {0} is not discovered yet".format(anchor_name))
+        self.anchor_location_static("Red", 0, 2300, 100)
+        self.anchor_location_static("Green", 3000, 800, 100)
+        self.anchor_location_static("Blue", 0, 340, 100)
 
         # Subscribe to tag position so that we can show live view
         if self._tag_name in self._mac_address_mapping:
             mac_address = self._mac_address_mapping[self._tag_name]
+            print("-----> tag mac {0}".format(mac_address))
             device = DwmDevice(mac_address=mac_address, manager=self._device_manager, 
                 location_callback=self.dwm_tag_location_received, subscribe=True)
             device.connect()
@@ -76,11 +80,11 @@ class LocationTrackerWorker(threading.Thread):
         for device_name in self._mac_address_mapping:
             if alias.startswith(device_name):
                 self._mac_address_mapping[device_name] = device.mac_address
-       
+                device_manager.stop()
         # Check if we collected macs for all nodes
-        print(self._mac_address_mapping)
-        if None not in self._mac_address_mapping.values():
-            device_manager.stop()
+        # print(self._mac_address_mapping)
+        # if None not in self._mac_address_mapping.values():
+        #     device_manager.stop()
 
     def dwm_anchor_location_received(self, device_manager, device, x_pos, y_pos, quality):
         print("X = {0}m , Y = {1}m, Quality= {2}, mac={3}".format(x_pos/1000, y_pos/1000, quality, device.mac_address))
@@ -93,6 +97,11 @@ class LocationTrackerWorker(threading.Thread):
 
         if device.subscribe != True:
             device_manager.stop()
+
+    def anchor_location_static(self, alias, x_pos, y_pos, quality):
+        if self._parent != None:
+            evt = LocationReceivedEvent(LOC_RECEIVED_EVNT_TYPE, -1, alias, DeviceType.ANCHOR, x_pos, y_pos, quality)
+            wx.PostEvent(self._parent, evt)
 
     def dwm_tag_location_received(self, device_manager, device, x_pos, y_pos, quality):
         if self._parent != None:

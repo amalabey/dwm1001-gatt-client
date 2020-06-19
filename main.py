@@ -5,5 +5,5 @@ from LocationTrackerFrame import LocationTrackerFame
 if __name__ == '__main__':
     app = wx.App()
     device_manager = DwmDeviceManager()
-    frame = LocationTrackerFame(device_manager, ["Red", "Green", "Blue"], "Tag")
+    frame = LocationTrackerFame(device_manager, ["Green", "Blue", "Red"], "Tag")
     app.MainLoop()
